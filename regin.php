@@ -7,8 +7,8 @@
 			
 			$user_query = $mysqli->query("SELECT * FROM `users` WHERE `id` = ".$_SESSION['user']);
 			while($user_read = $user_query->fetch_row()) {
-				if($user_read[3] == 0) header("Location: user.php");
-				else if($user_read[3] == 1) header("Location: admin.php");
+				if($user_read[4] == 0) header("Location: user.php");
+				else if($user_read[4] == 1) header("Location: admin.php");
 			}
 		}
  	}
@@ -43,6 +43,11 @@
 					<input name="_password" type="password" placeholder="" onkeypress="return PressToEnter(event)"/>
 					<div class = "sub-name">Повторите пароль:</div>
 					<input name="_passwordCopy" type="password" placeholder="" onkeypress="return PressToEnter(event)"/>
+					<div class = "sub-name">Фотография:</div>
+					<input name="photo" type="file" accept=".jpg, .jpeg, .png, .gif" onchange="previewImage(this)"/>
+					<div id="imagePreviewContainer" style="display:none; margin-top:10px;">
+						<img id="imagePreview" src="#" alt="Предпросмотр" style="max-width: 150px; max-height: 150px; border-radius: 5px;"/>
+					</div>
 					
 					<a href="login.php">Вернуться</a>
 					<input type="button" class="button" value="Зайти" onclick="RegIn()" style="margin-top: 0px;"/>
@@ -61,20 +66,55 @@
 			var loading = document.getElementsByClassName("loading")[0];
 			var button = document.getElementsByClassName("button")[0];
 			
+			function previewImage(input) {
+				var previewContainer = document.getElementById('imagePreviewContainer');
+				var preview = document.getElementById('imagePreview');
+				
+				if (input.files && input.files[0]) {
+					var file = input.files[0];
+					var fileType = file.type;
+					var validImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
+					
+					if (!validImageTypes.includes(fileType)) {
+						alert("Пожалуйста, выберите изображение формата JPEG, PNG или GIF.");
+						input.value = "";
+						previewContainer.style.display = 'none';
+						return;
+					}
+					
+					var reader = new FileReader();
+					reader.onload = function(e) {
+						preview.src = e.target.result;
+						previewContainer.style.display = 'block';
+					}
+					reader.readAsDataURL(file);
+				} else {
+					previewContainer.style.display = 'none';
+				}
+			}
+
 			function RegIn() {
 				var _login = document.getElementsByName("_login")[0].value;
 				var _password = document.getElementsByName("_password")[0].value;
 				var _passwordCopy = document.getElementsByName("_passwordCopy")[0].value;
+				var photoInput = document.querySelector('input[name="photo"]');
+				
+				var photoFile = photoInput.files[0];
+				if(photoFile == undefined) {
+					alert("Выберите файл.");
+					return;
+				}
 				
 				if(_login != "") {
 					if(_password != "") {
 						if(_password == _passwordCopy) {
 							loading.style.display = "block";
 							button.className = "button_diactive";
-							
+
 							var data = new FormData();
 							data.append("login", _login);
 							data.append("password", _password);
+							data.append("photo", photoFile);
 							
 							// AJAX запрос
 							$.ajax({
@@ -92,6 +132,10 @@
 									console.log("Авторизация прошла успешно, id: " +_data);
 									if(_data == -1) {
 										alert("Пользователь с таким логином существует.");
+										loading.style.display = "none";
+										button.className = "button";
+									} else if(_data == -2) {
+										alert("Недопустимый формат файла. Пожалуйста, загрузите изображение.");
 										loading.style.display = "none";
 										button.className = "button";
 									} else {
